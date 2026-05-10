@@ -786,6 +786,11 @@ class OnkyoAccessory {
 		callback(); // success
 	}
 
+	readOnlyPerms() {
+		const perms = Characteristic.Perms || this.platform.api.hap.Perms;
+		return [perms?.READ || 'pr'];
+	}
+
 	/// /////////////////////
 	// TV SERVICE FUNCTIONS
 	/// /////////////////////
@@ -833,7 +838,7 @@ class OnkyoAccessory {
 			.setCharacteristic(Characteristic.InputSourceType, inputSourceType);
 
 		input.getCharacteristic(Characteristic.ConfiguredName).setProps({
-			perms: [Characteristic.Perms.READ],
+			perms: this.readOnlyPerms(),
 		});
 
 		television.addLinkedService(input);
@@ -911,7 +916,7 @@ class OnkyoAccessory {
 			.getCharacteristic(Characteristic.ConfiguredName)
 			.setValue(this.name)
 			.setProps({
-				perms: [Characteristic.Perms.READ],
+				perms: this.readOnlyPerms(),
 			});
 
 		tvService
