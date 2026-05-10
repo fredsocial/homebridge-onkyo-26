@@ -430,7 +430,7 @@
                             "type": "boolean",
                             "title": "Filter Inputs",
                             "description": "Whether or not to limit exposed inputs to the provided mapping. If true, no other inputs will be exposed.",
-                            "default": true
+                            "default": false
                         },
                         "default_volume": {
                             "type": "integer",
@@ -458,7 +458,8 @@
                         "map_volume_100": {
                             "type": "boolean",
                             "title": "Map Max Volume to 100%",
-                            "description": "Maps volume level to the given max volume value as a percentage with 100% being max volume. Useful in conjunction with the volume dimmer. Example: Max Volume is set to 60 with Map Max Volume to 100% enabled. At 100% 'brightness', volume will be 60, 50% 'brightness' will be 30, etc."
+                            "description": "Maps volume level to the given max volume value as a percentage with 100% being max volume. Useful in conjunction with the volume dimmer. Example: Max Volume is set to 60 with Map Max Volume to 100% enabled. At 100% 'brightness', volume will be 60, 50% 'brightness' will be 30, etc.",
+                            "default": false
                         },
                         "poll_status_interval": {
                             "type": "string",

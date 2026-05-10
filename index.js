@@ -100,9 +100,9 @@ class OnkyoAccessory {
 		this.log.debug('defaultInput: %s', this.defaultInput);
 		this.defaultVolume = this.config.default_volume;
 		this.log.debug('defaultVolume: %s', this.defaultVolume);
-		this.maxVolume = this.config.max_volume || 60;
+		this.maxVolume = this.config.max_volume || 30;
 		this.log.debug('maxVolume: %s', this.maxVolume);
-		this.mapVolume100 = this.config.map_volume_100 || true;
+		this.mapVolume100 = this.config.map_volume_100 === true;
 		this.log.debug('mapVolume100: %s', this.mapVolume100);
 
 		this.buttons = {
