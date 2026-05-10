@@ -408,10 +408,10 @@ npm publish
 
 After publishing, Homebridge UI should be able to find `homebridge-onkyo-26` from the Plugins search page.
 
-If npm reports a local cache ownership error, fix your npm cache ownership:
+If npm reports a local cache ownership error, fix the ownership of your npm cache directory. On macOS or Linux, this is usually:
 
 ```bash
-sudo chown -R 501:20 "/Users/freddyreyes/.npm"
+sudo chown -R "$(id -u):$(id -g)" ~/.npm
 ```
 
 ## Fork Notes
