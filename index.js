@@ -124,7 +124,7 @@ class OnkyoAccessory {
 		this.state = false;
 		this.m_state = false;
 		this.v_state = 0;
-		this.i_state = null;
+		this.i_state = 1;
 		this.interval = Number.parseInt(this.poll_status_interval, 10);
 		this.avrManufacturer = 'Onkyo';
 		this.avrSerial = this.config.serial || this.ip_address;
@@ -158,6 +158,7 @@ class OnkyoAccessory {
 		this.tvService = this.createTvService(this.accessory);
 		this.createTvSpeakerService(this.tvService);
 		this.addSources(this.tvService);
+		this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
 		if (this.volume_type) {
 			this.log.debug('Creating Dimmer service linked to TV for receiver %s', this.name);
 			this.createVolumeType(this.tvService);
@@ -329,8 +330,8 @@ class OnkyoAccessory {
 		this.m_state = (response === 'on');
 		this.log.debug('eventAudioMuting - message: %s, new m_state %s', response, this.m_state);
 		// Communicate status
-		if (this.tvService)
-			this.tvService.getCharacteristic(Characteristic.Mute).updateValue(this.m_state, null, 'm_statuspoll');
+		if (this.tvSpeakerService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Mute).updateValue(this.m_state, null, 'm_statuspoll');
 	}
 
 	eventInput(response) {
@@ -348,7 +349,8 @@ class OnkyoAccessory {
 			if (this.i_state !== (index + 1))
 				this.log.info('Event - Input changed: %s', input);
 
-			this.i_state = index + 1;
+			if (index >= 0)
+				this.i_state = index + 1;
 
 			this.log.debug('eventInput - message: %s - new i_state: %s - input: %s', response, this.i_state, input);
 			// this.tvService.getCharacteristic(Characteristic.ActiveIdentifier).updateValue(this.i_state);
@@ -374,8 +376,8 @@ class OnkyoAccessory {
 		}
 
 		// Communicate status
-		if (this.tvService)
-			this.tvService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state, null, 'v_statuspoll');
+		if (this.tvSpeakerService)
+			this.tvSpeakerService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state, null, 'v_statuspoll');
 	}
 
 	eventClose(response) {
