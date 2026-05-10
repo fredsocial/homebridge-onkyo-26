@@ -33,7 +33,7 @@
                         "model": {
                             "type": "string",
                             "title": "Receiver Model Number",
-                            "default": "TX-NR515",
+                            "default": "TX-NR609",
                             "description": "Receiver model number (or closest to it).",
                             "oneOf": [
                                 {
