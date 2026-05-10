@@ -45,8 +45,8 @@ class OnkyoAccessory {
 		this.log = platform.log;
 
 		this.log.info('**************************************************************');
-		this.log.info('  homebridge-onkyo version ' + info.version);
-		this.log.info('  GitHub: https://github.com/ToddGreenfield/homebridge-onkyo ');
+		this.log.info('  homebridge-onkyo-26 version ' + info.version);
+		this.log.info('  GitHub: https://github.com/fredsocial/homebridge-onkyo-26 ');
 		this.log.info('**************************************************************');
 		this.log.info('start success...');
 		this.log.debug('Debug mode enabled');
@@ -163,7 +163,7 @@ class OnkyoAccessory {
 			this.createVolumeType(this.tvService);
 		}
 
-		this.platform.api.publishExternalAccessories('homebridge-onkyo', [this.accessory]);
+		this.platform.api.publishExternalAccessories('homebridge-onkyo-26', [this.accessory]);
 	}
 
 	createRxInput() {
@@ -957,5 +957,5 @@ class OnkyoAccessory {
 
 module.exports = homebridge => {
   ({Service, Characteristic} = homebridge.hap);
-  homebridge.registerPlatform('homebridge-onkyo', 'Onkyo', OnkyoPlatform);
+  homebridge.registerPlatform('homebridge-onkyo-26', 'Onkyo', OnkyoPlatform);
 };

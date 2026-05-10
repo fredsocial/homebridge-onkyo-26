@@ -1,10 +1,4 @@
-# homebridge-onkyo
-[![npm](https://img.shields.io/npm/dt/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
-[![npm](https://img.shields.io/npm/l/homebridge-onkyo.svg)](https://github.com/ToddGreenfield/homebridge-onkyo/blob/master/LICENSE)
-
-[![NPM Version](https://img.shields.io/npm/v/homebridge-onkyo.svg)](https://www.npmjs.com/package/homebridge-onkyo)
-![Node.js CI](https://github.com/ToddGreenfield/homebridge-onkyo/workflows/Node.js%20CI/badge.svg?branch=master)
-![CodeQL](https://github.com/ToddGreenfield/homebridge-onkyo/workflows/CodeQL/badge.svg)
+# homebridge-onkyo-26
 
 Homebridge plugin for Onkyo Receivers
 Should work for all supported models as listed in the eiscp/eiscp-commands.json file. If your model is not listed, try TX-NR609.
@@ -16,7 +10,7 @@ Existing users of my original fork or gw-wiscon's be sure to update the "platfor
 
 # Changelog
 
-Changes are tracked via [Github Releases](https://github.com/ToddGreenfield/homebridge-onkyo/releases).
+Changes are tracked via [Github Releases](https://github.com/fredsocial/homebridge-onkyo-26/releases).
 
 # Volume Control
 
@@ -31,7 +25,7 @@ As a prerequisite ensure that the Onkyo receiver is controllable using the Onkyo
 It is recommended to install and configure this plugin using [homebridge-config-ui-x](https://github.com/oznu/homebridge-config-ui-x#readme), however you can also install manually using the following manual tasks:
 
 1. Install homebridge using: npm install -g homebridge
-2. Install this plugin using: npm install -g homebridge-onkyo
+2. Install this plugin using: npm install -g git+https://github.com/fredsocial/homebridge-onkyo-26.git
 3. Update your configuration file. See the sample below.
 
 # Configuration
@@ -93,7 +87,7 @@ Receiver Attributes         |
 
 For Troubleshooting look in the homebridge-onkyo/node_modules/eiscp/examples directory and see if you can run 3.js. "node 3.js". It should output all available commands.
 
-You can find the output also in the [wiki](https://github.com/ToddGreenfield/homebridge-onkyo/wiki/EISCP-output-of-3.js).
+You can find the output also in the [wiki](https://github.com/fredsocial/homebridge-onkyo-26/wiki/EISCP-output-of-3.js).
 
 # EISCP Dependency
 

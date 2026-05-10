@@ -3,7 +3,7 @@
     "pluginType": "platform",
     "singular": true,
     "headerDisplay": "Onkyo-like receiver as a HomeKit TV.",
-    "footerDisplay": "https://github.com/solowalker27/homebridge-onkyo",
+    "footerDisplay": "https://github.com/fredsocial/homebridge-onkyo-26",
     "schema": {
         "type": "object",
         "required": [
