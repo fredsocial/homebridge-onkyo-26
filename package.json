@@ -20,7 +20,7 @@
     "eslint": ">=7.30.0",
     "eslint-plugin-ava": "^13.2.0",
     "eslint-plugin-unicorn": "latest",
-    "eslint-plugin-json": "^3.0.0",
+    "eslint-plugin-json": "^4.0.1",
     "xo": ">=0.47.0"
   },
   "keywords": [
