@@ -288,7 +288,7 @@ class OnkyoAccessory {
 			v_statusemitter.on('v_statuspoll', data => {
 				const volume = that.receiverVolumeToHomeKit(data);
 				if (volume === null) {
-					that.log.warn('event - VOLUME status poller - ignored invalid receiver volume: %s', data);
+					that.log.debug('event - VOLUME status poller - ignored invalid receiver volume: %s', data);
 					return;
 				}
 
@@ -373,7 +373,7 @@ class OnkyoAccessory {
 	eventVolume(response) {
 		const volume = this.receiverVolumeToHomeKit(response);
 		if (volume === null) {
-			this.log.warn('eventVolume - ignored invalid receiver volume: %s', response);
+			this.log.debug('eventVolume - ignored invalid receiver volume: %s', response);
 			return;
 		}
 
