@@ -100,7 +100,7 @@ class OnkyoAccessory {
 		this.log.debug('defaultInput: %s', this.defaultInput);
 		this.defaultVolume = this.config.default_volume;
 		this.log.debug('defaultVolume: %s', this.defaultVolume);
-		this.maxVolume = this.config.max_volume || 30;
+		this.maxVolume = this.parseNumber(this.config.max_volume) || 30;
 		this.log.debug('maxVolume: %s', this.maxVolume);
 		this.mapVolume100 = this.config.map_volume_100 === true;
 		this.log.debug('mapVolume100: %s', this.mapVolume100);
@@ -286,7 +286,13 @@ class OnkyoAccessory {
 			}, {longpolling: true, interval: that.interval * 1000, longpollEventName: 'v_statuspoll'});
 
 			v_statusemitter.on('v_statuspoll', data => {
-				that.v_state = data;
+				const volume = that.receiverVolumeToHomeKit(data);
+				if (volume === null) {
+					that.log.warn('event - VOLUME status poller - ignored invalid receiver volume: %s', data);
+					return;
+				}
+
+				that.v_state = volume;
 				that.log.debug('event - VOLUME status poller - new v_state: ', that.v_state);
 				// if (that.tvService ) {
 				// 	that.tvService.getCharacteristic(Characteristic.Volume).updateValue(that.v_state, null, 'v_statuspoll');
@@ -365,15 +371,14 @@ class OnkyoAccessory {
 	}
 
 	eventVolume(response) {
-		if (this.mapVolume100) {
-			const volumeMultiplier = this.maxVolume / 100;
-			const newVolume = response / volumeMultiplier;
-			this.v_state = Math.round(newVolume);
-			this.log.debug('eventVolume - message: %s, new v_state %s PERCENT', response, this.v_state);
-		} else {
-			this.v_state = response;
-			this.log.debug('eventVolume - message: %s, new v_state %s ACTUAL', response, this.v_state);
+		const volume = this.receiverVolumeToHomeKit(response);
+		if (volume === null) {
+			this.log.warn('eventVolume - ignored invalid receiver volume: %s', response);
+			return;
 		}
+
+		this.v_state = volume;
+		this.log.debug('eventVolume - message: %s, new HomeKit v_state %s', response, this.v_state);
 
 		// Communicate status
 		if (this.tvSpeakerService)
@@ -791,6 +796,53 @@ class OnkyoAccessory {
 	readOnlyPerms() {
 		const perms = Characteristic.Perms || this.platform.api.hap.Perms;
 		return [perms?.READ || 'pr'];
+	}
+
+	parseNumber(value) {
+		const source = Array.isArray(value) ? value[0] : value;
+		if (typeof source === 'number')
+			return Number.isFinite(source) ? source : null;
+
+		if (typeof source !== 'string')
+			return null;
+
+		const trimmed = source.trim();
+		if (trimmed.length === 0)
+			return null;
+
+		const decimal = Number(trimmed);
+		if (Number.isFinite(decimal))
+			return decimal;
+
+		if (/^[\da-f]+$/i.test(trimmed)) {
+			const hex = Number.parseInt(trimmed, 16);
+			return Number.isFinite(hex) ? hex : null;
+		}
+
+		return null;
+	}
+
+	clampHomeKitVolume(value) {
+		if (!Number.isFinite(value))
+			return null;
+
+		return Math.min(100, Math.max(0, Math.round(value)));
+	}
+
+	receiverVolumeToHomeKit(value) {
+		const volume = this.parseNumber(value);
+		if (volume === null)
+			return null;
+
+		if (this.mapVolume100) {
+			const volumeMultiplier = this.maxVolume / 100;
+			if (!Number.isFinite(volumeMultiplier) || volumeMultiplier <= 0)
+				return null;
+
+			return this.clampHomeKitVolume(volume / volumeMultiplier);
+		}
+
+		return this.clampHomeKitVolume(volume);
 	}
 
 	/// /////////////////////
