@@ -390,6 +390,216 @@ Package dry run:
 npm pack --dry-run
 ```
 
+## ARCHITECTURE
+
+This repository is a single-file Homebridge dynamic platform plugin with a bundled eISCP command library.
+
+| Path | Purpose |
+| --- | --- |
+| `index.js` | Main Homebridge plugin implementation. Registers the `Onkyo` platform, creates accessories, maps HomeKit actions to eISCP commands, and handles receiver events. |
+| `config.schema.json` | Homebridge UI schema. Defines the plugin settings shown in Homebridge Config UI X. |
+| `package.json` | npm package metadata, Homebridge package name, dependencies, scripts, engine requirements, and repository links. |
+| `package-lock.json` | Locked dependency tree for repeatable installs. |
+| `eiscp/eiscp.js` | Bundled eISCP client used to communicate with receivers over the network. |
+| `eiscp/eiscp-commands.json` | Receiver model and command database. This powers model/input support. |
+| `.github/workflows/` | GitHub Actions workflows for Node checks and CodeQL scanning. |
+
+### Runtime Flow
+
+1. Homebridge loads `index.js`.
+2. `module.exports` registers the plugin as package `homebridge-onkyo-26` with platform alias `Onkyo`.
+3. `OnkyoPlatform` reads the configured `receivers` array.
+4. Each receiver config becomes an `OnkyoAccessory`.
+5. `OnkyoAccessory` creates a HomeKit TV accessory plus a linked `TelevisionSpeaker`.
+6. Receiver inputs are loaded from `eiscp/eiscp-commands.json` for the selected model.
+7. HomeKit commands are translated into eISCP commands such as power, input, mute, volume, and remote-key actions.
+8. Receiver events update HomeKit state for power, input, mute, and volume.
+
+### HomeKit Services
+
+The main receiver service is `Service.Television`. Volume is handled through `Service.TelevisionSpeaker` because HomeKit does not accept `Volume` and `Mute` directly on `Television` as valid TV characteristics.
+
+Optional compatibility volume controls can also be exposed as:
+
+- `Service.Lightbulb` when `volume_type` is `dimmer`.
+- `Service.Fan` when `volume_type` is `speed`.
+
+### Receiver Communication
+
+The plugin communicates with receivers using ISCP/eISCP through the bundled `eiscp` directory. Most receiver-specific behavior comes from the selected `model`. If a receiver model is missing, choose the closest model with a similar command set; `TX-NR609` is the default fallback.
+
+## DECISIONS
+
+These are the project decisions that matter when replicating or maintaining this fork:
+
+- Package name is `homebridge-onkyo-26`.
+- Homebridge platform alias remains `Onkyo` for config compatibility.
+- Repository source of truth is `https://github.com/fredsocial/homebridge-onkyo-26`.
+- Default receiver model is `TX-NR609`.
+- Minimum supported Homebridge version is `1.4.0`.
+- Minimum supported Node.js version is `14.19.1`.
+- The bundled `eiscp` library stays in the repository because the original dependency is no longer actively maintained on npm.
+- Receiver volume is normalized before updating HomeKit so invalid values, `NaN`, and values above HomeKit's `0-100` range are not sent to HomeKit.
+- `Mute` and `Volume` updates belong to `TelevisionSpeaker`, not `Television`.
+- Versioning is standard npm semver. The current reset line starts at `0.0.1`; future releases should normally increment to `0.0.2`, `0.0.3`, and so on unless the project intentionally moves to `1.0.0`.
+- Because older `2026.x.x` versions may exist on npm, publishing a lower version may require an explicit npm tag, for example `npm publish --tag latest`.
+- Do not add personal paths, local usernames, emails, npm cache output, or machine-specific troubleshooting logs to public documentation.
+
+## RUNBOOK
+
+Use this checklist to reproduce the project from a fresh machine or fresh Homebridge install.
+
+### 1. Clone
+
+```bash
+git clone https://github.com/fredsocial/homebridge-onkyo-26.git
+cd homebridge-onkyo-26
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Verify Metadata
+
+```bash
+npm pkg get name version repository.url engines
+```
+
+Expected package name:
+
+```text
+homebridge-onkyo-26
+```
+
+Expected platform in Homebridge config:
+
+```json
+"platform": "Onkyo"
+```
+
+### 4. Run Checks
+
+```bash
+npm test
+```
+
+### 5. Inspect Package Contents
+
+```bash
+npm pack --dry-run
+```
+
+Confirm the tarball includes the runtime files:
+
+- `index.js`
+- `config.schema.json`
+- `package.json`
+- `README.md`
+- `LICENSE`
+- `eiscp/eiscp.js`
+- `eiscp/eiscp-commands.json`
+
+### 6. Install In Homebridge From GitHub
+
+For a normal global Homebridge install:
+
+```bash
+npm install -g git+https://github.com/fredsocial/homebridge-onkyo-26.git
+```
+
+For Homebridge Docker, open the Homebridge terminal or container shell and run the install inside the container.
+
+### 7. Configure Homebridge
+
+Add a receiver entry to the `platforms` array:
+
+```json
+{
+  "platform": "Onkyo",
+  "receivers": [
+    {
+      "name": "Receiver",
+      "ip_address": "10.0.0.46",
+      "model": "TX-NR609"
+    }
+  ]
+}
+```
+
+Restart Homebridge or the plugin child bridge after changing configuration.
+
+### 8. Validate Runtime Logs
+
+A healthy startup should show:
+
+```text
+homebridge-onkyo-26 version ...
+GitHub: https://github.com/fredsocial/homebridge-onkyo-26
+start success...
+```
+
+If Homebridge reports invalid HomeKit values, check receiver volume and input events first. Invalid receiver volume should be ignored or clamped before reaching HomeKit.
+
+### 9. Publish To npm
+
+Log in to npm:
+
+```bash
+npm login
+npm whoami
+```
+
+Confirm the logged-in account has publish access:
+
+```bash
+npm owner ls homebridge-onkyo-26
+```
+
+Publish:
+
+```bash
+npm publish --tag latest
+```
+
+Verify:
+
+```bash
+npm view homebridge-onkyo-26 version
+npm dist-tag ls homebridge-onkyo-26
+```
+
+If npm rejects a lower semver because an older high-numbered release exists, publish with an explicit tag and then move the tag:
+
+```bash
+npm publish --tag reset
+npm dist-tag add homebridge-onkyo-26@0.0.1 latest
+```
+
+### 10. Push Changes
+
+```bash
+git status
+git add README.md package.json package-lock.json index.js config.schema.json
+git commit -m "Update project documentation"
+git push origin master
+```
+
+Only include files that actually changed.
+
+## TODO
+
+- Add automated tests around volume normalization, mute handling, input mapping, and HomeKit characteristic setup.
+- Add a small local fixture for eISCP receiver responses so regressions can be tested without a physical receiver.
+- Review `poll_status_interval`; the current runtime multiplies the configured value by `1000`, so the setting should be clarified or normalized in code.
+- Confirm and document Zone 3 and Zone 4 behavior. The schema exposes them, but runtime command mapping is known to be implemented for main zone and Zone 2.
+- Consider adding `.npmignore` so npm package contents are explicit instead of falling back to `.gitignore`.
+- Add a release checklist for version bumps, npm tags, GitHub tags, and Homebridge UI verification.
+- Consider moving the plugin from a single `index.js` into smaller modules after tests exist.
+- Keep README and npm package metadata free of local machine paths, personal usernames, and private troubleshooting output.
+
 ## Publishing To npm
 
 The package name is already set to `homebridge-onkyo-26`.
