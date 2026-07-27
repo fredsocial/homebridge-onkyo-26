@@ -88,6 +88,7 @@ class OnkyoAccessory {
 		this.cmdMap.main.volume = 'master-volume';
 		this.cmdMap.main.muting = 'audio-muting';
 		this.cmdMap.main.input = 'input-selector';
+		this.cmdMap.main.hdmiOutput = 'hdmi-output-selector';
 		this.cmdMap.zone2 = new Array(4);
 		this.cmdMap.zone2.power = 'power';
 		this.cmdMap.zone2.volume = 'volume';
@@ -104,6 +105,8 @@ class OnkyoAccessory {
 		this.log.debug('maxVolume: %s', this.maxVolume);
 		this.mapVolume100 = this.config.map_volume_100 === true;
 		this.log.debug('mapVolume100: %s', this.mapVolume100);
+		this.hdmi_outputs = this.config.hdmi_outputs === true;
+		this.log.debug('hdmi_outputs: %s', this.hdmi_outputs);
 
 		this.buttons = {
 			[Characteristic.RemoteKey.REWIND]: 'rew',
@@ -125,6 +128,10 @@ class OnkyoAccessory {
 		this.m_state = false;
 		this.v_state = 0;
 		this.i_state = 1;
+		this.hdmiOutputState = {
+			main: false,
+			sub: false,
+		};
 		this.interval = Number.parseInt(this.poll_status_interval, 10);
 		this.avrManufacturer = 'Onkyo';
 		this.avrSerial = this.config.serial || this.ip_address;
@@ -141,6 +148,7 @@ class OnkyoAccessory {
 		this.eiscp.on(this.cmdMap[this.zone].volume, this.eventVolume.bind(this));
 		this.eiscp.on(this.cmdMap[this.zone].muting, this.eventAudioMuting.bind(this));
 		this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
+		this.eiscp.on(this.cmdMap.main.hdmiOutput, this.eventHdmiOutput.bind(this));
 
 		this.setUp();
 	}
@@ -162,6 +170,10 @@ class OnkyoAccessory {
 		if (this.volume_type) {
 			this.log.debug('Creating Dimmer service linked to TV for receiver %s', this.name);
 			this.createVolumeType(this.tvService);
+		}
+		if (this.hdmi_outputs) {
+			this.log.debug('Creating HDMI output switches linked to TV for receiver %s', this.name);
+			this.createHdmiOutputSwitches(this.tvService);
 		}
 
 		this.platform.api.publishExternalAccessories('homebridge-onkyo-26', [this.accessory]);
@@ -383,6 +395,20 @@ class OnkyoAccessory {
 		// Communicate status
 		if (this.tvSpeakerService)
 			this.tvSpeakerService.getCharacteristic(Characteristic.Volume).updateValue(this.v_state, null, 'v_statuspoll');
+	}
+
+	eventHdmiOutput(response) {
+		const hdmiOutputState = this.receiverHdmiOutputToHomeKit(response);
+		if (!hdmiOutputState) {
+			this.log.debug('eventHdmiOutput - ignored invalid receiver HDMI output: %s', response);
+			return;
+		}
+
+		if (this.hdmiOutputState.main !== hdmiOutputState.main || this.hdmiOutputState.sub !== hdmiOutputState.sub)
+			this.log.info('Event - HDMI output changed: Main %s, Sub %s', hdmiOutputState.main ? 'on' : 'off', hdmiOutputState.sub ? 'on' : 'off');
+
+		this.hdmiOutputState = hdmiOutputState;
+		this.updateHdmiOutputSwitches();
 	}
 
 	eventClose(response) {
@@ -706,6 +732,69 @@ class OnkyoAccessory {
 			this.tvSpeakerService.getCharacteristic(Characteristic.Mute).updateValue(this.m_state);
 	}
 
+	getHdmiMainOutput(callback, context) {
+		this.getHdmiOutput('main', callback, context);
+	}
+
+	getHdmiSubOutput(callback, context) {
+		this.getHdmiOutput('sub', callback, context);
+	}
+
+	getHdmiOutput(output, callback, context) {
+		if (context && context === 'hdmi_statuspoll') {
+			callback(null, this.hdmiOutputState[output]);
+			return;
+		}
+
+		if (!this.ip_address) {
+			this.log.error('Ignoring request; No ip_address defined.');
+			callback(new Error('No ip_address defined.'));
+			return;
+		}
+
+		callback(null, this.hdmiOutputState[output]);
+		this.log.debug('getHdmiOutput - actual mode, return %s state: %s', output, this.hdmiOutputState[output]);
+		this.eiscp.command('main.' + this.cmdMap.main.hdmiOutput + '=query', error => {
+			if (error)
+				this.log.error('getHdmiOutput - HDMI OUTPUT QRY: ERROR - current state: Main %s, Sub %s', this.hdmiOutputState.main, this.hdmiOutputState.sub);
+		});
+	}
+
+	setHdmiMainOutput(outputOn, callback, context) {
+		this.setHdmiOutput('main', outputOn, callback, context);
+	}
+
+	setHdmiSubOutput(outputOn, callback, context) {
+		this.setHdmiOutput('sub', outputOn, callback, context);
+	}
+
+	setHdmiOutput(output, outputOn, callback, context) {
+		if (context && context === 'hdmi_statuspoll') {
+			this.log.debug('setHdmiOutput - polling mode, ignore, output: %s, state: %s', output, this.hdmiOutputState[output]);
+			callback(null, this.hdmiOutputState[output]);
+			return;
+		}
+
+		if (!this.ip_address) {
+			this.log.error('Ignoring request; No ip_address defined.');
+			callback(new Error('No ip_address defined.'));
+			return;
+		}
+
+		this.setAttempt++;
+		this.hdmiOutputState[output] = outputOn;
+		const command = this.homeKitHdmiOutputToReceiver(this.hdmiOutputState);
+		this.log.debug('setHdmiOutput - actual mode, output: %s, state: %s, command: %s', output, outputOn, command);
+
+		callback(null, this.hdmiOutputState[output]);
+		this.eiscp.command('main.' + this.cmdMap.main.hdmiOutput + ':' + command, error => {
+			if (error)
+				this.log.error('setHdmiOutput - HDMI OUTPUT: ERROR - output: %s, command: %s', output, command);
+		});
+
+		this.updateHdmiOutputSwitches();
+	}
+
 	getInputSource(callback, context) {
 		// if context is i_statuspoll, then we need to request the actual value
 		if ((!context || context !== 'i_statuspoll') && this.switchHandling === 'poll') {
@@ -845,6 +934,43 @@ class OnkyoAccessory {
 		return this.clampHomeKitVolume(volume);
 	}
 
+	receiverHdmiOutputToHomeKit(response) {
+		if (!response)
+			return null;
+
+		const values = Array.isArray(response)
+			? response
+			: [String(response)];
+		const normalizedValues = values.map(value => value.toString().toLowerCase());
+
+		if (normalizedValues.includes('both'))
+			return {main: true, sub: true};
+
+		if (normalizedValues.includes('out-sub') || normalizedValues.includes('sub') || normalizedValues.includes('hdbaset'))
+			return {main: false, sub: true};
+
+		if (normalizedValues.includes('out') || normalizedValues.includes('yes') || normalizedValues.includes('hdmi'))
+			return {main: true, sub: false};
+
+		if (normalizedValues.includes('no') || normalizedValues.includes('analog'))
+			return {main: false, sub: false};
+
+		return null;
+	}
+
+	homeKitHdmiOutputToReceiver(hdmiOutputState) {
+		if (hdmiOutputState.main && hdmiOutputState.sub)
+			return 'both';
+
+		if (hdmiOutputState.main)
+			return 'out';
+
+		if (hdmiOutputState.sub)
+			return 'out-sub';
+
+		return 'no';
+	}
+
 	/// /////////////////////
 	// TV SERVICE FUNCTIONS
 	/// /////////////////////
@@ -960,6 +1086,31 @@ class OnkyoAccessory {
 
 		service.addLinkedService(this.speed);
 		}
+	}
+
+	createHdmiOutputSwitches(service) {
+		this.hdmiMainOutputSwitch = this.accessory.addService(Service.Switch, this.name + ' HDMI Main', 'hdmiMainOutput');
+		this.hdmiMainOutputSwitch
+			.getCharacteristic(Characteristic.On)
+			.on('get', this.getHdmiMainOutput.bind(this))
+			.on('set', this.setHdmiMainOutput.bind(this));
+
+		this.hdmiSubOutputSwitch = this.accessory.addService(Service.Switch, this.name + ' HDMI Sub', 'hdmiSubOutput');
+		this.hdmiSubOutputSwitch
+			.getCharacteristic(Characteristic.On)
+			.on('get', this.getHdmiSubOutput.bind(this))
+			.on('set', this.setHdmiSubOutput.bind(this));
+
+		service.addLinkedService(this.hdmiMainOutputSwitch);
+		service.addLinkedService(this.hdmiSubOutputSwitch);
+	}
+
+	updateHdmiOutputSwitches() {
+		if (this.hdmiMainOutputSwitch)
+			this.hdmiMainOutputSwitch.getCharacteristic(Characteristic.On).updateValue(this.hdmiOutputState.main, null, 'hdmi_statuspoll');
+
+		if (this.hdmiSubOutputSwitch)
+			this.hdmiSubOutputSwitch.getCharacteristic(Characteristic.On).updateValue(this.hdmiOutputState.sub, null, 'hdmi_statuspoll');
 	}
 
 	createTvService(accessory) {

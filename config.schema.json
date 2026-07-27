@@ -461,6 +461,12 @@
                             "description": "Maps volume level to the given max volume value as a percentage with 100% being max volume. Useful in conjunction with the volume dimmer. Example: Max Volume is set to 60 with Map Max Volume to 100% enabled. At 100% 'brightness', volume will be 60, 50% 'brightness' will be 30, etc.",
                             "default": false
                         },
+                        "hdmi_outputs": {
+                            "type": "boolean",
+                            "title": "Show HDMI Output Switches",
+                            "description": "Expose linked HomeKit switches for HDMI Main and HDMI Sub outputs. Turning both switches on selects both outputs; turning both off selects no/analog output.",
+                            "default": false
+                        },
                         "poll_status_interval": {
                             "type": "string",
                             "title": "Poll Status Interval",
