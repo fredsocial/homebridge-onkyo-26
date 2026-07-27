@@ -151,7 +151,7 @@ class OnkyoAccessory {
 
 		this.UUID = this.platform.api.hap.uuid.generate('homebridge:homebridge-onkyo' + this.name);
 		const categories = this.platform.api.hap.Categories || this.platform.api.hap.Accessory?.Categories;
-		const category = categories?.AUDIO_RECEIVER || categories?.OTHER;
+		const category = categories?.TV_SET_TOP_BOX || categories?.TELEVISION || categories?.AUDIO_RECEIVER || categories?.OTHER;
 		this.accessory = new this.platform.api.platformAccessory(this.name, this.UUID, category); // eslint-disable-line new-cap
 
 		this.createAccessoryInformationService(this.accessory);

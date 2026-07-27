@@ -419,6 +419,8 @@ This repository is a single-file Homebridge dynamic platform plugin with a bundl
 
 The main receiver service is `Service.Television`. Volume is handled through `Service.TelevisionSpeaker` because HomeKit does not accept `Volume` and `Mute` directly on `Television` as valid TV characteristics.
 
+The external accessory is published with the HomeKit `TV_SET_TOP_BOX` category when available, with fallback to `TELEVISION` on older Homebridge/HAP versions. This keeps the receiver grouped with TV-style controls instead of appearing as only a speaker. If an existing receiver was already added to HomeKit, remove and re-add it after updating so HomeKit refreshes the cached accessory category.
+
 Optional compatibility volume controls can also be exposed as:
 
 - `Service.Lightbulb` when `volume_type` is `dimmer`.
