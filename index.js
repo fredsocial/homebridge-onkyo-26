@@ -171,6 +171,7 @@ class OnkyoAccessory {
 			this.log.debug('Creating Dimmer service linked to TV for receiver %s', this.name);
 			this.createVolumeType(this.tvService);
 		}
+
 		if (this.hdmi_outputs) {
 			this.log.debug('Creating HDMI output switches linked to TV for receiver %s', this.name);
 			this.createHdmiOutputSwitches(this.tvService);
@@ -941,18 +942,18 @@ class OnkyoAccessory {
 		const values = Array.isArray(response)
 			? response
 			: [String(response)];
-		const normalizedValues = values.map(value => value.toString().toLowerCase());
+		const normalizedValues = new Set(values.map(value => value.toString().toLowerCase()));
 
-		if (normalizedValues.includes('both'))
+		if (normalizedValues.has('both'))
 			return {main: true, sub: true};
 
-		if (normalizedValues.includes('out-sub') || normalizedValues.includes('sub') || normalizedValues.includes('hdbaset'))
+		if (normalizedValues.has('out-sub') || normalizedValues.has('sub') || normalizedValues.has('hdbaset'))
 			return {main: false, sub: true};
 
-		if (normalizedValues.includes('out') || normalizedValues.includes('yes') || normalizedValues.includes('hdmi'))
+		if (normalizedValues.has('out') || normalizedValues.has('yes') || normalizedValues.has('hdmi'))
 			return {main: true, sub: false};
 
-		if (normalizedValues.includes('no') || normalizedValues.includes('analog'))
+		if (normalizedValues.has('no') || normalizedValues.has('analog'))
 			return {main: false, sub: false};
 
 		return null;
