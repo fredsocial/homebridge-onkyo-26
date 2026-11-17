@@ -21,7 +21,7 @@
     "eslint-plugin-ava": "^13.2.0",
     "eslint-plugin-unicorn": "latest",
     "eslint-plugin-json": "^3.0.0",
-    "xo": ">=0.47.0"
+    "xo": "0.55.1"
   },
   "keywords": [
     "homebridge-plugin",
@@ -75,7 +75,15 @@
         {
           "classes": false
         }
-      ]
+      ],
+      "unicorn/prefer-string-replace-all": "warn",
+      "unicorn/no-negated-condition": "off",
+      "no-negated-condition": "error"
+    }
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
     }
   }
 }

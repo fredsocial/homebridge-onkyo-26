@@ -666,3 +666,18 @@ This plugin is licensed under the ISC license.
 It is based on earlier `homebridge-onkyo` and `homebridge-onkyo-avr` work. The bundled eISCP library has its own license in `eiscp/LICENSE`; the original eISCP project is:
 
 https://github.com/untitledlt/eiscp.js
+
+## Dependency maintenance
+
+Commit `package-lock.json` with dependency changes and use `npm ci` for
+reproducible installs. Security maintenance uses XO 0.55.1, the first minor
+release series here without bundled TypeScript lint dependencies. The
+existing CommonJS runtime and receiver code are unchanged. New string-style
+suggestions remain warnings, and the existing core negated-condition rule
+is retained so its source suppressions keep their original meaning.
+
+Use Node 22 for development checks (`npm test`); the CI matrix also covers
+Node 20 and 24. The minimatch override applies only to the TypeScript lint
+parser and requires a modern development runtime. It is not a new receiver
+runtime requirement. Current upstream picomatch advisories still require a
+published fix; do not treat the lock refresh as a zero-advisory guarantee.
