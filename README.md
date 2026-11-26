@@ -110,6 +110,7 @@ Add this platform to the `platforms` array in your Homebridge `config.json`.
       "default_volume": 10,
       "max_volume": 40,
       "map_volume_100": false,
+      "hdmi_outputs": false,
       "volume_type": "none",
       "filter_inputs": true,
       "inputs": [
@@ -174,6 +175,7 @@ You can add multiple objects to `receivers`. Each entry can represent a separate
 | `default_volume` | No | none | Receiver volume to set after powering on through HomeKit. This is the receiver's actual volume number, not a HomeKit percentage. |
 | `max_volume` | No | `30` | Maximum receiver volume allowed when controlling volume from HomeKit. |
 | `map_volume_100` | No | `false` | When `true`, maps HomeKit's 0-100 volume scale to `max_volume`. |
+| `hdmi_outputs` | No | `false` | When `true`, exposes linked HomeKit switches for HDMI Main and HDMI Sub outputs. |
 | `inputs` | No | all supported model inputs | Optional input mappings. Use this to rename inputs in HomeKit. |
 | `filter_inputs` | No | `false` | When `true`, only inputs listed in `inputs` are exposed to HomeKit. |
 | `volume_type` | No | `none` | Optional extra volume service. Use `dimmer`, `speed`, or `none`. |
@@ -214,6 +216,26 @@ Common input names include:
 - `phono`
 
 For receiver-specific input support, check the output from the bundled eISCP examples or inspect `eiscp/eiscp-commands.json`.
+
+## HDMI Outputs
+
+Set `hdmi_outputs` to `true` on a receiver to expose linked HomeKit switches for HDMI Main and HDMI Sub output selection.
+
+```json
+{
+  "name": "Receiver",
+  "ip_address": "10.0.0.46",
+  "model": "TX-NR609",
+  "hdmi_outputs": true
+}
+```
+
+The switches map to the receiver's HDMI output selector:
+
+- Main on, Sub off: HDMI Main.
+- Main off, Sub on: HDMI Sub.
+- Main on, Sub on: both outputs.
+- Main off, Sub off: no/analog output.
 
 ## Volume Behavior
 
@@ -418,6 +440,8 @@ This repository is a single-file Homebridge dynamic platform plugin with a bundl
 ### HomeKit Services
 
 The main receiver service is `Service.Television`. Volume is handled through `Service.TelevisionSpeaker` because HomeKit does not accept `Volume` and `Mute` directly on `Television` as valid TV characteristics.
+
+The external accessory is published with the HomeKit `TV_SET_TOP_BOX` category when available, with fallback to `TELEVISION` on older Homebridge/HAP versions. This keeps the receiver grouped with TV-style controls instead of appearing as only a speaker. If an existing receiver was already added to HomeKit, remove and re-add it after updating so HomeKit refreshes the cached accessory category.
 
 Optional compatibility volume controls can also be exposed as:
 
@@ -642,3 +666,18 @@ This plugin is licensed under the ISC license.
 It is based on earlier `homebridge-onkyo` and `homebridge-onkyo-avr` work. The bundled eISCP library has its own license in `eiscp/LICENSE`; the original eISCP project is:
 
 https://github.com/untitledlt/eiscp.js
+
+## Dependency maintenance
+
+Commit `package-lock.json` with dependency changes and use `npm ci` for
+reproducible installs. Security maintenance uses XO 0.55.1, the first minor
+release series here without bundled TypeScript lint dependencies. The
+existing CommonJS runtime and receiver code are unchanged. New string-style
+suggestions remain warnings, and the existing core negated-condition rule
+is retained so its source suppressions keep their original meaning.
+
+Use Node 22 for development checks (`npm test`); the CI matrix also covers
+Node 20 and 24. The minimatch override applies only to the TypeScript lint
+parser and requires a modern development runtime. It is not a new receiver
+runtime requirement. Current upstream picomatch advisories still require a
+published fix; do not treat the lock refresh as a zero-advisory guarantee.
