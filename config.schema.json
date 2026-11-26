@@ -30,6 +30,17 @@
                             "default": "Receiver",
                             "description": "Name of the receiver as it will appear in HomeKit."
                         },
+                        "accessory_category": {
+                            "type": "string",
+                            "title": "Home App Accessory Type",
+                            "default": "set_top_box",
+                            "description": "Selects the accessory type and its default icon in the Home app.",
+                            "oneOf": [
+                                { "title": "Set-Top Box", "enum": ["set_top_box"] },
+                                { "title": "Audio Receiver", "enum": ["audio_receiver"] },
+                                { "title": "Television", "enum": ["television"] }
+                            ]
+                        },
                         "model": {
                             "type": "string",
                             "title": "Receiver Model Number",
