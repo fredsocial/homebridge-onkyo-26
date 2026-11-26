@@ -140,6 +140,8 @@ Add this platform to the `platforms` array in your Homebridge `config.json`.
 
 You can add multiple objects to `receivers`. Each entry can represent a separate receiver or a supported zone on the same receiver.
 
+Entries with the same name can represent different IP addresses or zones. The first entry with a given name keeps the original HomeKit identifier. Additional entries with that name use identifiers based on their name, IP address, and zone. Keep the existing entry first to preserve its pairing. If Homebridge sees a repeated name, IP address, and zone, it uses the first entry.
+
 ```json
 {
   "platform": "Onkyo",
@@ -167,6 +169,7 @@ You can add multiple objects to `receivers`. Each entry can represent a separate
 | `platform` | Yes | `Onkyo` | Must be exactly `Onkyo`. |
 | `receivers` | Yes | none | Array of receiver or receiver-zone configurations. |
 | `name` | Yes | `Receiver` | Name shown in HomeKit. |
+| `accessory_category` | No | `set_top_box` | Home app accessory type and default icon. Use `set_top_box`, `audio_receiver`, or `television` for each receiver or zone. |
 | `ip_address` | Yes | `10.0.0.46` in the UI schema | Receiver IP address. Use a reserved/static address. |
 | `model` | Yes | `TX-NR609` | Receiver model or closest compatible model. |
 | `zone` | No | `main` | Zone to control. Supported schema values are `main`, `zone2`, `zone3`, and `zone4`; runtime command mapping is implemented for `main` and `zone2`. |
@@ -441,7 +444,9 @@ This repository is a single-file Homebridge dynamic platform plugin with a bundl
 
 The main receiver service is `Service.Television`. Volume is handled through `Service.TelevisionSpeaker` because HomeKit does not accept `Volume` and `Mute` directly on `Television` as valid TV characteristics.
 
-The external accessory is published with the HomeKit `TV_SET_TOP_BOX` category when available, with fallback to `TELEVISION` on older Homebridge/HAP versions. This keeps the receiver grouped with TV-style controls instead of appearing as only a speaker. If an existing receiver was already added to HomeKit, remove and re-add it after updating so HomeKit refreshes the cached accessory category.
+To change the default Home app icon, choose **Home App Accessory Type** in the receiver settings or set `accessory_category` in its `config.json` entry, then restart Homebridge. If the icon stays the same for a paired receiver, remove the receiver from the Home app and add it again to refresh the cached category.
+
+When the selected category is unavailable, the plugin uses the first category available in this order: `TV_SET_TOP_BOX`, `TELEVISION`, `AUDIO_RECEIVER`, `OTHER`.
 
 Optional compatibility volume controls can also be exposed as:
 
@@ -451,6 +456,8 @@ Optional compatibility volume controls can also be exposed as:
 ### Receiver Communication
 
 The plugin communicates with receivers using ISCP/eISCP through the bundled `eiscp` directory. Most receiver-specific behavior comes from the selected `model`. If a receiver model is missing, choose the closest model with a similar command set; `TX-NR609` is the default fallback.
+
+Each receiver IP address gets its own eISCP connection and command queue. Zones on the same IP address share that connection, while each HomeKit accessory keeps its own input list.
 
 ## DECISIONS
 

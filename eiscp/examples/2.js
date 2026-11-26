@@ -1,7 +1,7 @@
 /*jslint node:true nomen:true*/
 'use strict';
 var util = require('util'),
-    eiscp = require('../eiscp');
+    eiscp = require('../eiscp')();
 
 /*
    Connect to receiver and send a command

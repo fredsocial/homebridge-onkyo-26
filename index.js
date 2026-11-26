@@ -2,8 +2,8 @@
 
 let Service;
 let Characteristic;
-let RxInputs;
 const pollingtoevent = require('polling-to-event');
+const createEiscp = require('./eiscp/eiscp.js');
 const info = require('./package.json');
 
 class OnkyoPlatform {
@@ -13,7 +13,7 @@ class OnkyoPlatform {
 		this.log = log;
 		this.receivers = this.config.receivers;
 		this.receiverAccessories = [];
-		this.connections = {};
+		this.connections = new Map();
 
 		if (this.receivers === undefined) {
 			this.log.error('ERROR: your configuration is incorrect. Configuration changed with version 0.7.x');
@@ -27,20 +27,36 @@ class OnkyoPlatform {
 		platform.numberReceivers = platform.receivers.length;
 		platform.log.debug('Creating %s receivers...', platform.numberReceivers);
 		if (platform.numberReceivers === 0) return;
+		const names = new Set();
+		const identities = new Set();
 		receivers.forEach(receiver => { // eslint-disable-line unicorn/no-array-for-each
-			if (!this.connections[receiver.ip_address]) {
-				platform.log.debug('Creating new connection for ip %s', receiver.ip_address);
-				this.connections[receiver.ip_address] = require('./eiscp/eiscp.js');
-				this.connections[receiver.ip_address].connect({host: receiver.ip_address, reconnect: true, model: receiver.model});
+			const zone = (receiver.zone || 'main').toLowerCase();
+			const identity = JSON.stringify([receiver.name, receiver.ip_address, zone]);
+			if (identities.has(identity)) {
+				platform.log.warn('Ignoring duplicate receiver %s at %s (%s)', receiver.name, receiver.ip_address, zone);
+				return;
 			}
 
-			const accessory = new OnkyoAccessory(platform, receiver); // eslint-disable-line no-unused-vars
-			});
+			const uuidSeed = names.has(receiver.name)
+				? 'homebridge-onkyo-26:receiver:' + identity
+				: 'homebridge:homebridge-onkyo' + receiver.name;
+			names.add(receiver.name);
+			identities.add(identity);
+
+			if (!this.connections.has(receiver.ip_address)) {
+				platform.log.debug('Creating new connection for ip %s', receiver.ip_address);
+				const connection = createEiscp();
+				this.connections.set(receiver.ip_address, connection);
+				connection.connect({host: receiver.ip_address, reconnect: true, model: receiver.model});
+			}
+
+			const accessory = new OnkyoAccessory(platform, receiver, zone, uuidSeed); // eslint-disable-line no-unused-vars
+		});
 	}
 }
 
 class OnkyoAccessory {
-	constructor(platform, receiver) {
+	constructor(platform, receiver, zone, uuidSeed) {
 		this.platform = platform;
 		this.log = platform.log;
 
@@ -51,7 +67,7 @@ class OnkyoAccessory {
 		this.log.info('start success...');
 		this.log.debug('Debug mode enabled');
 
-		this.eiscp = platform.connections[receiver.ip_address];
+		this.eiscp = platform.connections.get(receiver.ip_address);
 		this.setAttempt = 0;
 
 		this.config = receiver;
@@ -61,7 +77,7 @@ class OnkyoAccessory {
 		this.log.debug('IP %s', this.ip_address);
 		this.model = this.config.model;
 		this.log.debug('Model %s', this.model);
-		this.zone = (this.config.zone || 'main').toLowerCase();
+		this.zone = zone;
 		this.log.debug('Zone %s', this.zone);
 
 		if (this.config.volume_type === undefined) {
@@ -150,16 +166,18 @@ class OnkyoAccessory {
 		this.eiscp.on(this.cmdMap[this.zone].input, this.eventInput.bind(this));
 		this.eiscp.on(this.cmdMap.main.hdmiOutput, this.eventHdmiOutput.bind(this));
 
-		this.setUp();
+		this.setUp(uuidSeed);
 	}
 
-	setUp() {
+	setUp(uuidSeed) {
 		this.createRxInput();
 		this.polling(this);
 
-		this.UUID = this.platform.api.hap.uuid.generate('homebridge:homebridge-onkyo' + this.name);
+		this.UUID = this.platform.api.hap.uuid.generate(uuidSeed);
 		const categories = this.platform.api.hap.Categories || this.platform.api.hap.Accessory?.Categories;
-		const category = categories?.TV_SET_TOP_BOX || categories?.TELEVISION || categories?.AUDIO_RECEIVER || categories?.OTHER;
+		const category = (this.config.accessory_category === 'audio_receiver' && categories?.AUDIO_RECEIVER)
+			|| (this.config.accessory_category === 'television' && categories?.TELEVISION)
+			|| categories?.TV_SET_TOP_BOX || categories?.TELEVISION || categories?.AUDIO_RECEIVER || categories?.OTHER;
 		this.accessory = new this.platform.api.platformAccessory(this.name, this.UUID, category); // eslint-disable-line new-cap
 
 		this.createAccessoryInformationService(this.accessory);
@@ -231,7 +249,7 @@ class OnkyoAccessory {
 
 		// Drop last comma first
 		newobj = newobj.slice(0, -1) + ']}';
-		RxInputs = JSON.parse(newobj);
+		this.rxInputs = JSON.parse(newobj).Inputs;
 	}
 
 	polling(platform) {
@@ -363,7 +381,7 @@ class OnkyoAccessory {
 			// Convert to i_state input code
 			const index
 				= input !== null // eslint-disable-line no-negated-condition
-				? RxInputs.Inputs.findIndex(i => i.label === input)
+				? this.rxInputs.findIndex(i => i.label === input)
 				: -1;
 			if (this.i_state !== (index + 1))
 				this.log.info('Event - Input changed: %s', input);
@@ -477,7 +495,7 @@ class OnkyoAccessory {
 
 						const index
 							= label !== null // eslint-disable-line no-negated-condition
-							? RxInputs.Inputs.findIndex(i => i.label === label)
+							? this.rxInputs.findIndex(i => i.label === label)
 							: -1;
 						this.i_state = index + 1;
 
@@ -843,7 +861,7 @@ class OnkyoAccessory {
 		this.setAttempt++;
 
 		this.i_state = source;
-		const label = RxInputs.Inputs[this.i_state - 1].label;
+		const label = this.rxInputs[this.i_state - 1].label;
 
 		this.log.debug('setInputState - actual mode, ACTUAL input i_state: %s - label: %s', this.i_state, label);
 
@@ -979,17 +997,16 @@ class OnkyoAccessory {
 		// If input name mappings are provided, use them.
 		// Option to only configure specified inputs with filter_inputs
 		if (this.filter_inputs) {
-			// Check the RxInputs.Inputs items to see if each exists in this.inputs. Return new array of those that do.
-			RxInputs.Inputs = RxInputs.Inputs.filter(rxinput => {
+			this.rxInputs = this.rxInputs.filter(rxinput => {
 				return this.inputs.some(input => {
 					return input.input_name === rxinput.label;
 				});
 			});
 		}
 
-		this.log.debug(RxInputs.Inputs);
+		this.log.debug(this.rxInputs);
 		// Create final array of inputs, using any labels defined in the config's inputs to override the default labels
-		const inputs = RxInputs.Inputs.map((i, index) => {
+		const inputs = this.rxInputs.map((i, index) => {
 			const hapId = index + 1;
 			let inputName = i.label;
 			if (this.inputs) {
