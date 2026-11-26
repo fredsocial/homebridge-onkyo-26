@@ -38,9 +38,19 @@ The default model is `TX-NR609`. If your exact model is not listed, try `TX-NR60
 
 ## Installation
 
+### Install Or Update From npm
+
+In Homebridge, open **Plugins** and search for `homebridge-onkyo-26`, or run this command on the Homebridge host:
+
+```bash
+npm install -g homebridge-onkyo-26
+```
+
+Version `0.0.3` fixes connections to multiple receivers and adds a per-receiver or per-zone Home app accessory type setting. See [#29](https://github.com/fredsocial/homebridge-onkyo-26/issues/29) and [#30](https://github.com/fredsocial/homebridge-onkyo-26/issues/30).
+
 ### Install From GitHub
 
-Until this fork is published on npm, install it directly from GitHub:
+To install the current source from GitHub, run:
 
 ```bash
 npm install -g git+https://github.com/fredsocial/homebridge-onkyo-26.git
@@ -60,7 +70,7 @@ If you previously installed `homebridge-onkyo`, remove it before installing this
 
 ```bash
 npm uninstall -g homebridge-onkyo
-npm install -g git+https://github.com/fredsocial/homebridge-onkyo-26.git
+npm install -g homebridge-onkyo-26
 ```
 
 The package name is `homebridge-onkyo-26`, but the Homebridge platform alias remains `Onkyo`, so your config should still use:
@@ -68,12 +78,6 @@ The package name is `homebridge-onkyo-26`, but the Homebridge platform alias rem
 ```json
 "platform": "Onkyo"
 ```
-
-### Homebridge UI Search
-
-Homebridge's Plugins search page searches npm. A GitHub-only plugin will not appear in search until it is published to npm.
-
-To make it searchable in Homebridge UI, publish this package to npm as `homebridge-onkyo-26`, then search for that name in the Homebridge Plugins page.
 
 ## Configuration
 
@@ -322,15 +326,11 @@ Important: the current runtime treats this value as a number and then multiplies
 
 ### Plugin Does Not Appear In Homebridge Search
 
-If installed only from GitHub, this is expected. Homebridge plugin search uses npm.
-
-Install from the Homebridge terminal:
+Search for the exact package name `homebridge-onkyo-26`. You can also install it from the Homebridge terminal:
 
 ```bash
-npm install -g git+https://github.com/fredsocial/homebridge-onkyo-26.git
+npm install -g homebridge-onkyo-26
 ```
-
-Or publish `homebridge-onkyo-26` to npm and install/search from the Homebridge UI.
 
 ### Permission Denied During Global Install
 
